@@ -24,8 +24,8 @@ jobs:
       - name: Compile x64 indirect display driver
         shell: pwsh
         run: |
-          $tools = Get-ChildItem .\driver\prototype\packages -Recurse -Filter stampinf.exe | Select-Object -First 1
-          if (-not $tools) { throw 'WDK package is missing stampinf.exe' }
+          $tools = Get-ChildItem .\driver\prototype\packages -Recurse -Filter stampinf.exe | Where-Object { $_.DirectoryName -match '\\x64$' } | Select-Object -First 1
+          if (-not $tools) { throw 'WDK x64 stampinf.exe is missing' }
           Write-Host "Using WDK tools at $($tools.DirectoryName)"
           $env:PATH = "$($tools.DirectoryName);$env:PATH"
           msbuild .\driver\prototype\IddSampleDriver\IddSampleDriver.vcxproj /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off
