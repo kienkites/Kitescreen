@@ -8,12 +8,14 @@ namespace Kitescreen.Host.Services;
 
 public sealed class UsbSession
 {
-    public Task RunAsync(AdbService adb, string serial, DisplaySource display, Action<string> status, CancellationToken token) =>
+    public Task RunAsync(AdbService adb, string serial, DisplaySource? display, Action<string> status, CancellationToken token) =>
         Task.Run(async () =>
         {
             int? port = null;
             try
             {
+                // In Extend mode wait for IddCx frames before opening the tablet session.
+                using var virtualSource = display is null ? await DriverFrameSource.ConnectAsync(status, token) : null;
                 port = await adb.ForwardAsync(serial, token);
                 using var client = new TcpClient { NoDelay = true };
                 using (var deadline = CancellationTokenSource.CreateLinkedTokenSource(token))
@@ -34,18 +36,19 @@ public sealed class UsbSession
                 if (await ReadLineAsync(stream, token) != "STREAM READY")
                     throw new IOException("The tablet did not accept screen streaming.");
 
-                using var capture = new ScreenCapture(display, width, height);
+                using var capture = display is null ? null : new ScreenCapture(display, width, height);
                 var statistics = Stopwatch.StartNew();
                 int frames = 0;
                 long bytes = 0;
                 double captureMs = 0;
                 double deliveryMs = 0;
-                status($"Streaming at tablet resolution {width} × {height}…");
+                status($"Streaming {(display is null ? "extended desktop" : "mirrored screen")} at {width} × {height}…");
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
                     var started = Stopwatch.GetTimestamp();
-                    var jpeg = capture.Capture();
+                    var jpeg = virtualSource is null ? capture!.Capture()
+                        : await virtualSource.CaptureAsync(width, height, token);
                     captureMs += Stopwatch.GetElapsedTime(started).TotalMilliseconds;
                     var delivering = Stopwatch.GetTimestamp();
                     using (var deadline = CancellationTokenSource.CreateLinkedTokenSource(token))

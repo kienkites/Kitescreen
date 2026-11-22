@@ -1,7 +1,13 @@
-# Experimental Kitescreen Indirect Display Driver
+# Experimental Kitescreen indirect display driver
 
-Based on Microsoft's Windows Driver Samples, video/IndirectDisplay, under MS-PL. This source is **not installed, signed or used by the current app**. It is an isolated starting point for development with Visual Studio C++ desktop tools and the matching WDK. The Windows host build does not include it.
+Based on Microsoft's Windows Driver Samples, video/IndirectDisplay (MS-PL). This is a user-mode IddCx driver for one virtual display. It advertises 1920 × 1200, 1200 × 1920 and 1280 × 800 at 60 Hz. The driver copies swapchain pixels to a local named pipe (`KitescreenFrames`); the Windows host reads them, compresses JPEG and sends them to Android using the existing USB session.
 
-Changes from the sample: a single EDID-less display with target modes 1920 × 1200, 1200 × 1920 and 1280 × 800; a distinct prototype hardware ID and driver group; Kitescreen diagnostic name. The driver still discards each swapchain frame as the original sample does. Installing it will not stream any image to the Android app.
+## State and testing
 
-Next: read frames from the assigned swapchain, deliver them to a low-latency local encoder and add monitor arrival/departure tied to the authorized USB session. Then test a signed development package on Windows 11, including crash/disconnect recovery. Only after this can Kitescreen offer true Extend mode. Do not install this prototype on the user's main PC.
+The driver build is checked separately in GitHub Actions, but compilation does not establish that it loads, that the virtual monitor activates, or that video arrives on a real tablet. The repository does **not** distribute a signed installer. Do not install an unsigned or untested driver on the primary PC. Test the development package on a Windows 11 VM or spare machine first, with a trusted test certificate and Windows test-signing requirements handled according to Microsoft driver guidance. The root device ID is `Root\KitescreenPrototypeDisplay`. Staging the INF with PnPUtil alone does not create a root-enumerated device; a development device must be created using the WDK `devgen` tool or a suitable device installer.
+
+Once Windows reports a working Kitescreen virtual display, select **Extend** in Display settings, start the Android receiver, then choose **Extend (driver)** in the Windows host. The host waits for the driver's frames; clicking Stop cancels the wait. Driver installation and Windows display arrangement remain manual in this prototype.
+
+## Remaining work
+
+The local pipe transfers raw BGRA, then the host performs JPEG compression. This prioritizes proving that the tablet displays the *extended* desktop. Video smoothness is not solved yet. Add hardware H.264 encoding/decoding and cursor metadata next. Then tie virtual monitor arrival/departure to the authorized USB session, handle orientation dynamically and package a properly signed installer before general use.

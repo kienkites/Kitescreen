@@ -20,11 +20,12 @@
             <ComboBox x:Name="Devices" DisplayMemberPath="Display" MinHeight="36" Foreground="Black"/>
             <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                 <Button x:Name="RefreshButton" Content="Refresh devices" Padding="16,8" Click="Refresh_Click"/>
-                <Button x:Name="ConnectButton" Content="Start screen" Padding="16,8" Margin="8,0,0,0" Click="Connect_Click"/>
+                <Button x:Name="ConnectButton" Content="Mirror screen" Padding="16,8" Margin="8,0,0,0" Click="Connect_Click"/>
+                <Button x:Name="ExtendButton" Content="Extend (driver)" Padding="16,8" Margin="8,0,0,0" Click="Extend_Click"/>
                 <Button x:Name="DisconnectButton" Content="Stop" Padding="16,8" Margin="8,0,0,0" IsEnabled="False" Click="Disconnect_Click"/>
             </StackPanel>
         </StackPanel>
         <TextBlock x:Name="Status" Grid.Row="4" Text="Open Kitescreen on the tablet, enable USB debugging and authorize this computer." TextWrapping="Wrap" Margin="0,20,0,0" Foreground="#7DD3FC"/>
-        <TextBlock Grid.Row="5" Text="USB screen preview: shares an existing monitor (tablet resolution, up to 30 fps). Extended desktop and touch are coming next." VerticalAlignment="Bottom" TextWrapping="Wrap" Margin="0,16,0,0"/>
+        <TextBlock Grid.Row="5" Text="Extend requires the signed experimental Kitescreen display driver and Windows Display settings set to Extend. Video still uses JPEG; touch is not available." VerticalAlignment="Bottom" TextWrapping="Wrap" Margin="0,16,0,0"/>
     </Grid>
 </Window>

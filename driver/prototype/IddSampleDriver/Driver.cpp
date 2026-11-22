@@ -365,6 +365,77 @@ void SwapChainProcessor::Run()
     AvRevertMmThreadCharacteristics(AvTaskHandle);
 }
 
+// The driver only copies the virtual monitor surface and passes it to the local host.
+// JPEG/USB work stays in the application. Never wait indefinitely on the application.
+static void PublishDriverFrame(ID3D11Device* device, ID3D11DeviceContext* context,
+    IDXGIResource* surface, ComPtr<ID3D11Texture2D>& staging,
+    HANDLE& pipe, HANDLE terminate, vector<BYTE>& bytes)
+{
+    ComPtr<ID3D11Texture2D> texture;
+    if (FAILED(surface->QueryInterface(IID_PPV_ARGS(&texture)))) return;
+    D3D11_TEXTURE2D_DESC desc = {};
+    texture->GetDesc(&desc);
+    if (desc.Width < 640 || desc.Width > 4096 || desc.Height < 480 || desc.Height > 4096 ||
+        static_cast<UINT64>(desc.Width) * desc.Height > 4194304 ||
+        desc.Format != DXGI_FORMAT_B8G8R8A8_UNORM || desc.SampleDesc.Count != 1) return;
+
+    D3D11_TEXTURE2D_DESC stagingDesc = desc;
+    stagingDesc.Usage = D3D11_USAGE_STAGING;
+    stagingDesc.BindFlags = 0;
+    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    stagingDesc.MiscFlags = 0;
+    if (staging)
+    {
+        D3D11_TEXTURE2D_DESC current = {};
+        staging->GetDesc(&current);
+        if (current.Width != desc.Width || current.Height != desc.Height || current.Format != desc.Format)
+            staging.Reset();
+    }
+    if (!staging && FAILED(device->CreateTexture2D(&stagingDesc, nullptr, &staging))) return;
+    context->CopyResource(staging.Get(), texture.Get());
+    D3D11_MAPPED_SUBRESOURCE mapped = {};
+    if (FAILED(context->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped))) return;
+    const UINT pixelBytes = desc.Width * desc.Height * 4;
+    bytes.resize(16 + pixelBytes);
+    memcpy(bytes.data(), "KFR1", 4);
+    const UINT width = desc.Width, height = desc.Height;
+    memcpy(bytes.data() + 4, &width, 4);
+    memcpy(bytes.data() + 8, &height, 4);
+    memcpy(bytes.data() + 12, &pixelBytes, 4);
+    for (UINT y = 0; y < height; y++)
+        memcpy(bytes.data() + 16 + y * width * 4,
+            static_cast<const BYTE*>(mapped.pData) + y * mapped.RowPitch, width * 4);
+    context->Unmap(staging.Get(), 0);
+
+    if (pipe == INVALID_HANDLE_VALUE)
+        pipe = CreateFileW(L"\\\\.\\pipe\\KitescreenFrames", GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
+            FILE_FLAG_OVERLAPPED, nullptr);
+    if (pipe == INVALID_HANDLE_VALUE) return;
+    HANDLE ready = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    if (!ready) { CloseHandle(pipe); pipe = INVALID_HANDLE_VALUE; return; }
+    OVERLAPPED operation = {};
+    operation.hEvent = ready;
+    DWORD written = 0;
+    BOOL success = WriteFile(pipe, bytes.data(), static_cast<DWORD>(bytes.size()), &written, &operation);
+    if (!success && GetLastError() == ERROR_IO_PENDING)
+    {
+        const HANDLE signals[] = { ready, terminate };
+        if (WaitForMultipleObjects(2, signals, FALSE, 100) == WAIT_OBJECT_0)
+            success = GetOverlappedResult(pipe, &operation, &written, FALSE);
+        else
+        {
+            CancelIoEx(pipe, &operation);
+            GetOverlappedResult(pipe, &operation, &written, TRUE);
+        }
+    }
+    CloseHandle(ready);
+    if (!success || written != bytes.size())
+    {
+        CloseHandle(pipe);
+        pipe = INVALID_HANDLE_VALUE;
+    }
+}
+
 void SwapChainProcessor::RunCore()
 {
     // Get the DXGI device interface
@@ -383,6 +454,10 @@ void SwapChainProcessor::RunCore()
     {
         return;
     }
+
+    ComPtr<ID3D11Texture2D> staging;
+    vector<BYTE> frameBytes;
+    HANDLE pipe = INVALID_HANDLE_VALUE;
 
     // Acquire and release buffers in a loop
     for (;;)
@@ -425,16 +500,8 @@ void SwapChainProcessor::RunCore()
             // We have new frame to process, the surface has a reference on it that the driver has to release
             AcquiredBuffer.Attach(Buffer.MetaData.pSurface);
 
-            // ==============================
-            // TODO: Process the frame here
-            //
-            // This is the most performance-critical section of code in an IddCx driver. It's important that whatever
-            // is done with the acquired surface be finished as quickly as possible. This operation could be:
-            //  * a GPU copy to another buffer surface for later processing (such as a staging surface for mapping to CPU memory)
-            //  * a GPU encode operation
-            //  * a GPU VPBlt to another surface
-            //  * a GPU custom compute shader encode operation
-            // ==============================
+            PublishDriverFrame(m_Device->Device.Get(), m_Device->DeviceContext.Get(),
+                AcquiredBuffer.Get(), staging, pipe, m_hTerminateEvent.Get(), frameBytes);
 
             // We have finished processing this frame hence we release the reference on it.
             // If the driver forgets to release the reference to the surface, it will be leaked which results in the
@@ -466,6 +533,7 @@ void SwapChainProcessor::RunCore()
             break;
         }
     }
+    if (pipe != INVALID_HANDLE_VALUE) CloseHandle(pipe);
 }
 
 #pragma endregion

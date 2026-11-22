@@ -12,6 +12,7 @@
 #include <avrt.h>
 #include <wrl.h>
 
+#include <cstring>
 #include <memory>
 #include <vector>
 

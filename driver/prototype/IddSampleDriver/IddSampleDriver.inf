@@ -10,7 +10,7 @@ Class = Display
 ClassVer = 2.0
 Provider=%ManufacturerName%
 CatalogFile=IddSampleDriver.cat
-DriverVer= ; TODO: set DriverVer in stampinf property pages
+DriverVer=11/22/2026,1.0.0.0
 
 [Manufacturer]
 %ManufacturerName%=Standard,NT$ARCH$.10.0...22000
@@ -63,9 +63,9 @@ IddSampleDriver.dll
 ; =================== Generic ==================================
 
 [Strings]
-ManufacturerName="Kites Group" ; TODO: Replace with your manufacturer name
-DiskName = "Kitescreen Prototype Installation Disk" ; TODO: Replace with driver disk name
-DeviceName="Kitescreen Prototype Display" ; TODO: Replace with correct device name
+ManufacturerName="Kites Group"
+DiskName = "Kitescreen Prototype Installation Disk"
+DeviceName="Kitescreen Prototype Display"
 
 REG_MULTI_SZ  = 0x00010000
 REG_SZ        = 0x00000000

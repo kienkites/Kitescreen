@@ -46,14 +46,18 @@ public partial class MainWindow : Window
         finally { if (!closed) SetBusy(false, false); }
     }
 
-    private async void Connect_Click(object sender, RoutedEventArgs e)
+    private async void Connect_Click(object sender, RoutedEventArgs e) => await ConnectAsync(false);
+
+    private async void Extend_Click(object sender, RoutedEventArgs e) => await ConnectAsync(true);
+
+    private async Task ConnectAsync(bool extend)
     {
         if (Devices.SelectedItem is not AndroidDevice device || !device.Authorized)
         {
             Status.Text = "Refresh devices and select an authorized USB tablet.";
             return;
         }
-        if (Displays.SelectedItem is not DisplaySource display)
+        if (!extend && Displays.SelectedItem is not DisplaySource)
         {
             Status.Text = "Select a Windows screen to share.";
             return;
@@ -64,7 +68,8 @@ public partial class MainWindow : Window
         Status.Text = "Connecting… Keep Kitescreen open on the tablet.";
         try
         {
-            sessionTask = new UsbSession().RunAsync(new AdbService(AdbPath.Text.Trim()), device.Serial, display,
+            sessionTask = new UsbSession().RunAsync(new AdbService(AdbPath.Text.Trim()), device.Serial,
+                extend ? null : (DisplaySource)Displays.SelectedItem,
                 text => Dispatcher.BeginInvoke(new Action(() => { if (!closed) Status.Text = text; })), active.Token);
             await sessionTask;
         }
@@ -85,7 +90,7 @@ public partial class MainWindow : Window
 
     private void SetBusy(bool busy, bool connected)
     {
-        RefreshButton.IsEnabled = ConnectButton.IsEnabled = BrowseButton.IsEnabled = !busy;
+        RefreshButton.IsEnabled = ConnectButton.IsEnabled = ExtendButton.IsEnabled = BrowseButton.IsEnabled = !busy;
         AdbPath.IsEnabled = Devices.IsEnabled = Displays.IsEnabled = !busy;
         DisconnectButton.IsEnabled = connected;
     }

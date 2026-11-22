@@ -1,0 +1,26 @@
+name: Build experimental display driver
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'driver/prototype/**'
+      - '.github/workflows/driver.yml'
+  pull_request:
+    paths:
+      - 'driver/prototype/**'
+      - '.github/workflows/driver.yml'
+permissions:
+  contents: read
+jobs:
+  driver:
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+      - uses: NuGet/setup-nuget@v2
+      - uses: microsoft/setup-msbuild@v2
+      - name: Restore SDK and WDK
+        shell: pwsh
+        run: nuget restore .\driver\prototype\packages.config -PackagesDirectory .\driver\prototype\packages\
+      - name: Compile x64 indirect display driver
+        shell: pwsh
+        run: msbuild .\driver\prototype\IddSampleDriver\IddSampleDriver.vcxproj /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off
