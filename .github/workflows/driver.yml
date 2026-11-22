@@ -36,14 +36,16 @@ jobs:
           New-Item -ItemType Directory -Force $stage | Out-Null
           Copy-Item .\driver\prototype\IddSampleDriver\IddSampleDriver.inf $stage
           Copy-Item .\driver\prototype\IddSampleDriver\x64\Release\IddSampleDriver.dll $stage
-          $inf2cat = Get-ChildItem .\driver\prototype\packages -Recurse -Filter Inf2Cat.exe | Select-Object -First 1
-          if (-not $inf2cat) { throw 'WDK Inf2Cat.exe is missing' }
-          & $inf2cat.FullName "/driver:$stage" /os:10_GE_X64
-          if ($LASTEXITCODE -ne 0) { throw 'INF validation or catalog creation failed' }
           $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=Kitescreen VM Test Only' -CertStoreLocation Cert:\CurrentUser\My -KeyExportPolicy NonExportable
           Export-Certificate -Cert $cert -FilePath (Join-Path $stage 'Kitescreen-Test.cer') | Out-Null
           $signTool = Get-ChildItem .\driver\prototype\packages -Recurse -Filter signtool.exe | Where-Object { $_.DirectoryName -match '\\x64$' } | Select-Object -First 1
           if (-not $signTool) { throw 'SDK x64 signtool.exe is missing' }
+          & $signTool.FullName sign /fd SHA256 /sha1 $cert.Thumbprint /s My (Join-Path $stage 'IddSampleDriver.dll')
+          if ($LASTEXITCODE -ne 0) { throw 'Driver DLL test-signing failed' }
+          $inf2cat = Get-ChildItem .\driver\prototype\packages -Recurse -Filter Inf2Cat.exe | Select-Object -First 1
+          if (-not $inf2cat) { throw 'WDK Inf2Cat.exe is missing' }
+          & $inf2cat.FullName "/driver:$stage" /os:10_GE_X64
+          if ($LASTEXITCODE -ne 0) { throw 'INF validation or catalog creation failed' }
           & $signTool.FullName sign /fd SHA256 /sha1 $cert.Thumbprint /s My (Join-Path $stage 'IddSampleDriver.cat')
           if ($LASTEXITCODE -ne 0) { throw 'Catalog test-signing failed' }
           "KITESCREEN_DRIVER_TEST_DIR=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
