@@ -10,14 +10,16 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
+import android.graphics.Bitmap
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 class MainActivity : Activity() {
     private lateinit var message: TextView
     private lateinit var picture: ImageView
     @Volatile private var server: UsbSessionServer? = null
+    private val pendingFrame = AtomicReference<Bitmap?>()
+    private val framePosted = AtomicBoolean(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,18 +64,10 @@ class MainActivity : Activity() {
                     bounds.outWidth.toLong() * bounds.outHeight <= 4_194_304 &&
                     bounds.outMimeType == "image/jpeg") { "Unsupported frame dimensions or format" }
                 val bitmap = requireNotNull(BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)) { "Cannot decode frame" }
-                val accepted = AtomicBoolean(false)
-                val applied = CountDownLatch(1)
-                runOnUiThread {
-                    try {
-                        if (server === active) {
-                            picture.setImageBitmap(bitmap)
-                            message.visibility = View.GONE
-                            accepted.set(true)
-                        }
-                    } finally { applied.countDown() }
-                }
-                check(applied.await(3, TimeUnit.SECONDS) && accepted.get()) { "Display is no longer active" }
+                check(server === active) { "Display is no longer active" }
+                // Keep only the newest decoded frame when the UI is busy.
+                pendingFrame.set(bitmap)
+                postLatestFrame(active)
             },
             status = { text ->
                 runOnUiThread {
@@ -88,9 +82,24 @@ class MainActivity : Activity() {
         active.start()
     }
 
+    private fun postLatestFrame(active: UsbSessionServer) {
+        if (!framePosted.compareAndSet(false, true)) return
+        picture.post {
+            val latest = pendingFrame.getAndSet(null)
+            if (server === active && latest != null) {
+                picture.setImageBitmap(latest)
+                message.visibility = View.GONE
+            }
+            framePosted.set(false)
+            // A newer frame may have arrived while this callback was running.
+            if (server === active && pendingFrame.get() != null) postLatestFrame(active)
+        }
+    }
+
     override fun onStop() {
         val active = server
         server = null
+        pendingFrame.set(null)
         active?.close()
         picture.setImageDrawable(null)
         super.onStop()

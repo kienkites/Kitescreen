@@ -19,16 +19,16 @@ Before streaming, Android also accepts `PING\n` and returns `PONG\n`. Earlier ap
 ## Frames
 Each frame is a four-byte big-endian signed length followed by exactly that many JPEG bytes. Valid lengths: 1 through 4,194,304. Android validates JPEG dimensions (both at most 4096 pixels and at most 4,194,304 pixels in total) and MIME type before pixel allocation.
 
-Android replies `FRAME\n` after decoding and applying the bitmap on the UI thread. This acknowledgment confirms UI submission, not physical display scan-out. Windows waits for it before capturing the next frame, so slow receivers cannot accumulate an unbounded frame queue. Capture runs off the Windows UI thread.
+Android replies `FRAME\n` after decoding and queueing the bitmap for display. The UI keeps only the newest pending bitmap, so a busy UI drops stale frames. This acknowledgment does not confirm physical display scan-out. Windows waits for it before capturing the next frame, so the transport cannot accumulate an unbounded frame queue. Capture runs off the Windows UI thread.
 
-Windows limits capture to a tablet's reported pixel size, JPEG quality 88 and at most 20 fps. The frame deadline is five seconds; Android has a ten-second socket idle timeout and a three-second UI submission timeout. EOF, invalid sizes, decode errors or missing acknowledgments terminate the session. There is no automatic reconnect yet.
+Windows limits capture to a tablet's reported pixel size, JPEG quality 88 and at most 30 fps. The frame deadline is five seconds; Android has a ten-second socket idle timeout and no UI submission wait. EOF, invalid sizes, decode errors or missing acknowledgments terminate the session. There is no automatic reconnect yet.
 
 ## Manual checks
 - Select each Windows monitor, including monitors to the left of the primary and mixed DPI screens.
 - Move a window and pointer; verify the tablet shows the selected monitor with correct aspect ratio.
 - Rotate the tablet, then click Start screen again after its activity restarts.
 - Stop, unplug USB, background the Android app and close the Windows app: verify resources are released and manual reconnect works.
-- Verify status fps responds to a slow receiver without growing delay or freezing Windows controls.
+- Verify status fps responds to a slow receiver without growing delay or freezing Windows controls. Note Windows status readings for average capture/JPEG and USB/decode milliseconds; compare them while moving a window.
 - Deny USB authorization: Start screen must refuse the unauthorized tablet.
 - An old Android version must fail to connect with a clear instruction to update.
 

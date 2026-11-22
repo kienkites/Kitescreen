@@ -38,12 +38,16 @@ public sealed class UsbSession
                 var statistics = Stopwatch.StartNew();
                 int frames = 0;
                 long bytes = 0;
+                double captureMs = 0;
+                double deliveryMs = 0;
                 status($"Streaming at tablet resolution {width} × {height}…");
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
                     var started = Stopwatch.GetTimestamp();
                     var jpeg = capture.Capture();
+                    captureMs += Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+                    var delivering = Stopwatch.GetTimestamp();
                     using (var deadline = CancellationTokenSource.CreateLinkedTokenSource(token))
                     {
                         deadline.CancelAfter(TimeSpan.FromSeconds(5));
@@ -51,16 +55,19 @@ public sealed class UsbSession
                         if (await ReadLineAsync(stream, deadline.Token) != "FRAME")
                             throw new IOException("Tablet rejected the frame.");
                     }
+                    deliveryMs += Stopwatch.GetElapsedTime(delivering).TotalMilliseconds;
                     frames++;
                     bytes += jpeg.Length;
                     if (statistics.Elapsed.TotalSeconds >= 1)
                     {
-                        status($"Streaming: {frames / statistics.Elapsed.TotalSeconds:F1} fps · {bytes * 8 / statistics.Elapsed.TotalSeconds / 1_000_000:F1} Mbps · JPEG preview");
+                        status($"Streaming: {frames / statistics.Elapsed.TotalSeconds:F1} fps · {bytes * 8 / statistics.Elapsed.TotalSeconds / 1_000_000:F1} Mbps · capture/JPEG {captureMs / frames:F0} ms · USB/decode {deliveryMs / frames:F0} ms");
                         frames = 0;
                         bytes = 0;
+                        captureMs = 0;
+                        deliveryMs = 0;
                         statistics.Restart();
                     }
-                    var pause = TimeSpan.FromMilliseconds(50) - Stopwatch.GetElapsedTime(started);
+                    var pause = TimeSpan.FromMilliseconds(1000d / 30) - Stopwatch.GetElapsedTime(started);
                     if (pause > TimeSpan.Zero) await Task.Delay(pause, token);
                 }
             }
