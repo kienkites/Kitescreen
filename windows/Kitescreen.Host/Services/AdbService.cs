@@ -16,6 +16,8 @@ public sealed class AdbService(string executable)
     {
         get
         {
+            var bundled = Path.Combine(AppContext.BaseDirectory, "platform-tools", "adb.exe");
+            if (File.Exists(bundled)) return bundled;
             foreach (var root in new[] {
                 Environment.GetEnvironmentVariable("ANDROID_HOME"),
                 Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),

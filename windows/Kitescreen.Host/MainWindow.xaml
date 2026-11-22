@@ -7,7 +7,7 @@
         <TextBlock Text="Kitescreen" FontSize="34" FontWeight="SemiBold"/>
         <TextBlock Grid.Row="1" Text="Connect your Android tablet via USB" FontSize="18" Margin="0,10,0,24"/>
         <StackPanel Grid.Row="2">
-            <TextBlock Text="Android SDK adb.exe" Margin="0,0,0,6"/>
+            <TextBlock Text="USB connection tool (included in the installed version)" Margin="0,0,0,6"/>
             <DockPanel>
                 <Button x:Name="BrowseButton" Content="Browse…" DockPanel.Dock="Right" Margin="8,0,0,0" Padding="12,6" Click="Browse_Click"/>
                 <TextBox x:Name="AdbPath" Padding="8,6" VerticalContentAlignment="Center"/>
@@ -26,6 +26,6 @@
             </StackPanel>
         </StackPanel>
         <TextBlock x:Name="Status" Grid.Row="4" Text="Open Kitescreen on the tablet, enable USB debugging and authorize this computer." TextWrapping="Wrap" Margin="0,20,0,0" Foreground="#7DD3FC"/>
-        <TextBlock Grid.Row="5" Text="Extend requires the signed experimental Kitescreen display driver and Windows Display settings set to Extend. Video still uses JPEG; touch is not available." VerticalAlignment="Bottom" TextWrapping="Wrap" Margin="0,16,0,0"/>
+        <TextBlock Grid.Row="5" Text="Extend uses the Kitescreen virtual display installed with the Windows app. Choose Extend in Windows Display settings. Video still uses JPEG; touch is not available." VerticalAlignment="Bottom" TextWrapping="Wrap" Margin="0,16,0,0"/>
     </Grid>
 </Window>
