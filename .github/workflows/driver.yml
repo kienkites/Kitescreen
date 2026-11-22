@@ -36,8 +36,8 @@ jobs:
           New-Item -ItemType Directory -Force $stage | Out-Null
           Copy-Item .\driver\prototype\IddSampleDriver\IddSampleDriver.inf $stage
           Copy-Item .\driver\prototype\IddSampleDriver\x64\Release\IddSampleDriver.dll $stage
-          $inf2cat = Get-ChildItem .\driver\prototype\packages -Recurse -Filter Inf2Cat.exe | Where-Object { $_.DirectoryName -match '\\x64$' } | Select-Object -First 1
-          if (-not $inf2cat) { throw 'WDK x64 Inf2Cat.exe is missing' }
+          $inf2cat = Get-ChildItem .\driver\prototype\packages -Recurse -Filter Inf2Cat.exe | Select-Object -First 1
+          if (-not $inf2cat) { throw 'WDK Inf2Cat.exe is missing' }
           & $inf2cat.FullName "/driver:$stage" /os:10_GE_X64
           if ($LASTEXITCODE -ne 0) { throw 'INF validation or catalog creation failed' }
           $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=Kitescreen VM Test Only' -CertStoreLocation Cert:\CurrentUser\My -KeyExportPolicy NonExportable
