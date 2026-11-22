@@ -1,20 +1,24 @@
-# Development setup
+# Development setup and screen test
 
-Pull main in both clones if Visual Studio and Android Studio use different folders.
+If both IDEs share one clone, pull main once. In Visual Studio open windows/Kitescreen.sln; in Android Studio open the same clone's android subfolder. Stop running apps before updating, then rebuild and run both. Protocol v2 requires both apps to be updated.
 
 ## Android
-Open the android subfolder (not the repository root) in Android Studio. Gradle Wrapper 8.9 is included, including its official JAR verified against the published SHA-256. No separate Gradle installation is needed. Use JDK 17 and install SDK 35 when prompted. Sync, select the tablet and run the app.
-
-On Samsung A8: Settings > About tablet > Software information > tap Build number seven times. Enable USB debugging in Developer options. Connect a USB data cable, unlock the tablet and authorize your computer. Keep Kitescreen visible.
+Gradle Wrapper 8.9 is included. Use JDK 17 and Android SDK 35. Sync, select Samsung SM-X200 and run. Keep Kitescreen visible and the tablet unlocked. Enable USB debugging and authorize your computer. Android should show "Waiting for Windows over USB".
 
 ## Windows
-Open windows/Kitescreen.sln in Visual Studio with the .NET desktop development workload and .NET 8 SDK. Build and run Kitescreen.Host.
+Use Visual Studio with .NET desktop development and the .NET 8 SDK. Build and run Kitescreen.Host. It finds adb.exe in standard SDK locations; use Browse if necessary.
 
-The app searches standard Android SDK locations for platform-tools/adb.exe. If missing, use Browse and select the adb.exe from the SDK configured in Android Studio.
+1. Click Refresh devices.
+2. Select the Windows screen to share.
+3. Select the authorized Samsung tablet.
+4. Click Start screen.
+5. Move a window on the selected monitor and verify it appears on the tablet. The tablet preserves aspect ratio with black borders when needed.
+6. Click Stop to end streaming.
 
-Click Refresh devices, select your authorized Samsung tablet, then Connect. Both apps should report connected. Disconnect ends the session. If unauthorized, allow debugging on the tablet and refresh. If the handshake times out, make sure the Android app is running in the foreground.
+An updated Android APK is also available in the Kitescreen-Android-debug artifact of a successful GitHub Actions build.
 
-This milestone only tests the USB control channel. No screen image, extended desktop, audio or touch forwarding is implemented yet.
+## What this version does
+Mirrors an existing monitor using JPEG frames over USB, up to a 1280-pixel longest edge and 10 fps. Windows shows measured fps and Mbps. It does not yet create a second Windows display, forward touch or reconnect automatically. Rotate the tablet and restart streaming if the activity restarts. A later H.264 transport and IddCx driver will build on this prototype.
 
-## Build checks
-GitHub Actions builds the Windows host and Android debug APK and runs Android lint. Hardware tests are separate: follow docs/USB-PROTOCOL.md. An APK can be downloaded from a successful build's Kitescreen-Android-debug artifact.
+## Checks
+GitHub Actions builds Windows, checks its binary frame format, builds Android, runs protocol/lifecycle unit tests and Android lint. Physical image quality, capture behavior and USB performance still need testing on the user's PC and Samsung A8.

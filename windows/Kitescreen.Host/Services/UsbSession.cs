@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -7,49 +8,76 @@ namespace Kitescreen.Host.Services;
 
 public sealed class UsbSession
 {
-    public async Task RunAsync(AdbService adb, string serial, Action<string> status, CancellationToken token)
-    {
-        int? port = null;
-        try
+    public Task RunAsync(AdbService adb, string serial, DisplaySource display, Action<string> status, CancellationToken token) =>
+        Task.Run(async () =>
         {
-            port = await adb.ForwardAsync(serial, token);
-            using var client = new TcpClient { NoDelay = true };
-            using (var deadline = CancellationTokenSource.CreateLinkedTokenSource(token))
+            int? port = null;
+            try
             {
-                deadline.CancelAfter(TimeSpan.FromSeconds(5));
-                await client.ConnectAsync(IPAddress.Loopback, port.Value, deadline.Token);
-            }
-            using var stream = client.GetStream();
-            await WriteAsync(stream, "KITESCREEN/1 HELLO", token);
-            if (await ReadAsync(stream, token) != "KITESCREEN/1 READY")
-                throw new IOException("Incompatible Android app. Update both apps.");
-            status("Connected via USB. Control channel ready; video is not implemented yet.");
-            while (true)
-            {
-                await WriteAsync(stream, "PING", token);
-                if (await ReadAsync(stream, token) != "PONG") throw new IOException("Invalid heartbeat.");
-                await Task.Delay(TimeSpan.FromSeconds(2), token);
-            }
-        }
-        finally
-        {
-            if (port.HasValue)
-            {
-                try { await adb.RemoveForwardAsync(serial, port.Value); }
-                catch (Exception e) when (e is IOException or TimeoutException)
-                { status($"USB forwarding cleanup failed: {e.Message}"); }
-            }
-        }
-    }
+                port = await adb.ForwardAsync(serial, token);
+                using var client = new TcpClient { NoDelay = true };
+                using (var deadline = CancellationTokenSource.CreateLinkedTokenSource(token))
+                {
+                    deadline.CancelAfter(TimeSpan.FromSeconds(5));
+                    await client.ConnectAsync(IPAddress.Loopback, port.Value, deadline.Token);
+                }
+                using var stream = client.GetStream();
+                await WriteLineAsync(stream, "KITESCREEN/2 HELLO", token);
+                if (await ReadLineAsync(stream, token) != "KITESCREEN/2 READY")
+                    throw new IOException("Incompatible Android app. Update and run both apps.");
+                await WriteLineAsync(stream, "STREAM JPEG", token);
+                if (await ReadLineAsync(stream, token) != "STREAM READY")
+                    throw new IOException("The tablet did not accept screen streaming.");
 
-    private static async Task WriteAsync(NetworkStream stream, string line, CancellationToken token)
+                using var capture = new ScreenCapture(display);
+                var statistics = Stopwatch.StartNew();
+                int frames = 0;
+                long bytes = 0;
+                status("Streaming the selected screen via USB…");
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var started = Stopwatch.GetTimestamp();
+                    var jpeg = capture.Capture();
+                    using (var deadline = CancellationTokenSource.CreateLinkedTokenSource(token))
+                    {
+                        deadline.CancelAfter(TimeSpan.FromSeconds(5));
+                        await FrameProtocol.WriteAsync(stream, jpeg, deadline.Token);
+                        if (await ReadLineAsync(stream, deadline.Token) != "FRAME")
+                            throw new IOException("Tablet rejected the frame.");
+                    }
+                    frames++;
+                    bytes += jpeg.Length;
+                    if (statistics.Elapsed.TotalSeconds >= 1)
+                    {
+                        status($"Streaming: {frames / statistics.Elapsed.TotalSeconds:F1} fps · {bytes * 8 / statistics.Elapsed.TotalSeconds / 1_000_000:F1} Mbps · JPEG preview");
+                        frames = 0;
+                        bytes = 0;
+                        statistics.Restart();
+                    }
+                    var pause = TimeSpan.FromMilliseconds(100) - Stopwatch.GetElapsedTime(started);
+                    if (pause > TimeSpan.Zero) await Task.Delay(pause, token);
+                }
+            }
+            finally
+            {
+                if (port.HasValue)
+                {
+                    try { await adb.RemoveForwardAsync(serial, port.Value); }
+                    catch (Exception e) when (e is IOException or TimeoutException)
+                    { status($"USB forwarding cleanup failed: {e.Message}"); }
+                }
+            }
+        }, token);
+
+    private static async Task WriteLineAsync(NetworkStream stream, string line, CancellationToken token)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
         deadline.CancelAfter(TimeSpan.FromSeconds(5));
         await stream.WriteAsync(Encoding.ASCII.GetBytes(line + "\n"), deadline.Token);
     }
 
-    private static async Task<string> ReadAsync(NetworkStream stream, CancellationToken token)
+    private static async Task<string> ReadLineAsync(NetworkStream stream, CancellationToken token)
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
         deadline.CancelAfter(TimeSpan.FromSeconds(5));

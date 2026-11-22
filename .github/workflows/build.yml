@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Check frame wire protocol
+        run: dotnet run --project windows/Kitescreen.ProtocolChecks --configuration Release
       - name: Build Windows host
         run: dotnet build windows/Kitescreen.sln --configuration Release
   android:

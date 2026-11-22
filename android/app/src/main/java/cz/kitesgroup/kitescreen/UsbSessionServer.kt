@@ -1,14 +1,18 @@
 package cz.kitesgroup.kitescreen
 
 import java.io.Closeable
+import java.io.DataInputStream
 import java.io.InputStream
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.Executors
 
-/** Development control channel, reachable through adb forwarding only. */
-class UsbSessionServer(private val status: (String) -> Unit) : Closeable {
+/** USB development transport. Never binds to a network-facing address. */
+class UsbSessionServer(
+    private val onFrame: (ByteArray) -> Unit = {},
+    private val status: (String) -> Unit
+) : Closeable {
     private val executor = Executors.newSingleThreadExecutor()
     @Volatile private var stopped = false
     private var listener: ServerSocket? = null
@@ -33,19 +37,32 @@ class UsbSessionServer(private val status: (String) -> Unit) : Closeable {
                         it.soTimeout = 10_000
                         it.tcpNoDelay = true
                         try {
-                            val input = it.getInputStream()
+                            val input = DataInputStream(it.getInputStream())
                             val output = it.getOutputStream()
-                            require(readLine(input) == "KITESCREEN/1 HELLO") { "Unsupported handshake" }
-                            output.write("KITESCREEN/1 READY\n".toByteArray(Charsets.US_ASCII))
-                            output.flush()
-                            status("Connected to Windows via USB\nControl channel ready — video coming next.")
-                            while (!stopped) {
-                                require(readLine(input) == "PING") { "Invalid heartbeat" }
-                                output.write("PONG\n".toByteArray(Charsets.US_ASCII))
+                            fun reply(line: String) {
+                                output.write((line + "\n").toByteArray(Charsets.US_ASCII))
                                 output.flush()
                             }
+                            require(readLine(input) == "KITESCREEN/2 HELLO") { "Update both Kitescreen apps" }
+                            reply("KITESCREEN/2 READY")
+                            while (!stopped) {
+                                when (readLine(input)) {
+                                    "PING" -> reply("PONG")
+                                    "STREAM JPEG" -> {
+                                        reply("STREAM READY")
+                                        status("Receiving Windows screen via USB")
+                                        while (!stopped) {
+                                            val jpeg = FrameProtocol.readFrame(input)
+                                            onFrame(jpeg)
+                                            // No next frame until the UI has accepted this one.
+                                            reply("FRAME")
+                                        }
+                                    }
+                                    else -> error("Invalid command")
+                                }
+                            }
                         } catch (e: Exception) {
-                            if (!stopped) status("Disconnected. Waiting for Windows…")
+                            if (!stopped) status("Disconnected: ${e.message}\nWaiting for Windows…")
                         } finally {
                             synchronized(this) { if (client === it) client = null }
                         }
@@ -53,6 +70,11 @@ class UsbSessionServer(private val status: (String) -> Unit) : Closeable {
                 }
             } catch (e: Exception) {
                 if (!stopped) status("Connection error: ${e.message}")
+            } finally {
+                synchronized(this) {
+                    client?.close()
+                    listener?.close()
+                }
             }
         }
     }

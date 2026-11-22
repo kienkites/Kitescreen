@@ -16,6 +16,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         AdbPath.Text = AdbService.DefaultPath;
+        Displays.ItemsSource = DisplaySource.List();
+        Displays.SelectedIndex = 0;
     }
 
     private void Browse_Click(object sender, RoutedEventArgs e)
@@ -29,6 +31,8 @@ public partial class MainWindow : Window
         SetBusy(true, false);
         try
         {
+            Displays.ItemsSource = DisplaySource.List();
+            Displays.SelectedIndex = 0;
             var devices = await new AdbService(AdbPath.Text.Trim()).DevicesAsync(lifetime.Token);
             if (closed) return;
             Devices.ItemsSource = devices;
@@ -49,14 +53,19 @@ public partial class MainWindow : Window
             Status.Text = "Refresh devices and select an authorized USB tablet.";
             return;
         }
+        if (Displays.SelectedItem is not DisplaySource display)
+        {
+            Status.Text = "Select a Windows screen to share.";
+            return;
+        }
         using var active = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         session = active;
         SetBusy(true, true);
         Status.Text = "Connecting… Keep Kitescreen open on the tablet.";
         try
         {
-            sessionTask = new UsbSession().RunAsync(new AdbService(AdbPath.Text.Trim()), device.Serial,
-                text => { if (!closed) Status.Text = text; }, active.Token);
+            sessionTask = new UsbSession().RunAsync(new AdbService(AdbPath.Text.Trim()), device.Serial, display,
+                text => Dispatcher.BeginInvoke(new Action(() => { if (!closed) Status.Text = text; })), active.Token);
             await sessionTask;
         }
         catch (OperationCanceledException)
@@ -77,7 +86,7 @@ public partial class MainWindow : Window
     private void SetBusy(bool busy, bool connected)
     {
         RefreshButton.IsEnabled = ConnectButton.IsEnabled = BrowseButton.IsEnabled = !busy;
-        AdbPath.IsEnabled = Devices.IsEnabled = !busy;
+        AdbPath.IsEnabled = Devices.IsEnabled = Displays.IsEnabled = !busy;
         DisconnectButton.IsEnabled = connected;
     }
 
