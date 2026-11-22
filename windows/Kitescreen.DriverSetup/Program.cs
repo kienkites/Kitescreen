@@ -124,7 +124,7 @@ internal static class Program
         if (set == new IntPtr(-1)) ThrowLastError("Enumerate devices for removal");
         try
         {
-            // Re-enumerate after each removal because indices can change.
+            // Each item in the enumeration is inspected at most once.
             uint index = 0;
             while (true)
             {
@@ -148,7 +148,7 @@ internal static class Program
                     continue;
                 }
                 if (!SetupDiCallClassInstaller(DifRemove, set, ref data)) ThrowLastError("Remove Kitescreen device");
-                index = 0;
+                index++;
             }
         }
         finally { SetupDiDestroyDeviceInfoList(set); }
