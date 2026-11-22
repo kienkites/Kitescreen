@@ -10,6 +10,7 @@ public partial class MainWindow : Window
     private readonly CancellationTokenSource lifetime = new();
     private CancellationTokenSource? session;
     private bool closed;
+    private Task? sessionTask;
 
     public MainWindow()
     {
@@ -54,8 +55,9 @@ public partial class MainWindow : Window
         Status.Text = "Connecting… Keep Kitescreen open on the tablet.";
         try
         {
-            await new UsbSession().RunAsync(new AdbService(AdbPath.Text.Trim()), device.Serial,
+            sessionTask = new UsbSession().RunAsync(new AdbService(AdbPath.Text.Trim()), device.Serial,
                 text => { if (!closed) Status.Text = text; }, active.Token);
+            await sessionTask;
         }
         catch (OperationCanceledException)
         {
@@ -65,6 +67,7 @@ public partial class MainWindow : Window
         finally
         {
             session = null;
+            sessionTask = null;
             if (!closed) SetBusy(false, false);
         }
     }
@@ -78,9 +81,18 @@ public partial class MainWindow : Window
         DisconnectButton.IsEnabled = connected;
     }
 
-    private void Window_Closing(object? sender, CancelEventArgs e)
+    private async void Window_Closing(object? sender, CancelEventArgs e)
     {
+        if (closed) return;
         closed = true;
+        var pending = sessionTask;
+        // Keep the dispatcher alive until the owned adb forwarding port is removed.
+        e.Cancel = pending != null;
         lifetime.Cancel();
+        if (pending != null)
+        {
+            try { await pending; } catch (Exception) { /* Connect handler reports errors. */ }
+            Close();
+        }
     }
 }
