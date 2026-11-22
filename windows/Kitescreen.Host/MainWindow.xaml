@@ -1,8 +1,28 @@
-<Window x:Class="Kitescreen.Host.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Kitescreen" Width="760" Height="480" MinWidth="540" MinHeight="340" WindowStartupLocation="CenterScreen" Background="#101827" Foreground="White">
-    <StackPanel Margin="32" VerticalAlignment="Center">
-        <TextBlock Text="Kitescreen" FontSize="36" FontWeight="SemiBold" />
-        <TextBlock Text="Android tablet as a second display for Windows" FontSize="18" Margin="0,12,0,24" TextWrapping="Wrap" />
-        <TextBlock Text="Project skeleton" FontSize="20" Foreground="#7DD3FC" />
-        <TextBlock Text="USB streaming and the virtual display driver are not implemented yet." Margin="0,12,0,0" TextWrapping="Wrap" />
-    </StackPanel>
+<Window x:Class="Kitescreen.Host.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Kitescreen" Width="820" Height="550" MinWidth="620" MinHeight="450" WindowStartupLocation="CenterScreen" Background="#101827" Foreground="White" Closing="Window_Closing">
+    <Grid Margin="32">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Text="Kitescreen" FontSize="34" FontWeight="SemiBold"/>
+        <TextBlock Grid.Row="1" Text="Connect your Android tablet via USB" FontSize="18" Margin="0,10,0,24"/>
+        <StackPanel Grid.Row="2">
+            <TextBlock Text="Android SDK adb.exe" Margin="0,0,0,6"/>
+            <DockPanel>
+                <Button x:Name="BrowseButton" Content="Browse…" DockPanel.Dock="Right" Margin="8,0,0,0" Padding="12,6" Click="Browse_Click"/>
+                <TextBox x:Name="AdbPath" Padding="8,6" VerticalContentAlignment="Center"/>
+            </DockPanel>
+        </StackPanel>
+        <StackPanel Grid.Row="3" Margin="0,16,0,0">
+            <TextBlock Text="USB tablet" Margin="0,0,0,6"/>
+            <ComboBox x:Name="Devices" DisplayMemberPath="Display" MinHeight="36" Foreground="Black"/>
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                <Button x:Name="RefreshButton" Content="Refresh devices" Padding="16,8" Click="Refresh_Click"/>
+                <Button x:Name="ConnectButton" Content="Connect" Padding="16,8" Margin="8,0,0,0" Click="Connect_Click"/>
+                <Button x:Name="DisconnectButton" Content="Disconnect" Padding="16,8" Margin="8,0,0,0" IsEnabled="False" Click="Disconnect_Click"/>
+            </StackPanel>
+        </StackPanel>
+        <TextBlock x:Name="Status" Grid.Row="4" Text="Open Kitescreen on the tablet, enable USB debugging and authorize this computer." TextWrapping="Wrap" Margin="0,20,0,0" Foreground="#7DD3FC"/>
+        <TextBlock Grid.Row="5" Text="Development preview: USB connection test only. Second-display video is coming next." VerticalAlignment="Bottom" TextWrapping="Wrap" Margin="0,16,0,0"/>
+    </Grid>
 </Window>

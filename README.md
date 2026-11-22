@@ -2,15 +2,12 @@
 
 Turn your Android tablet into a second display for Windows 11 via USB.
 
-## Development status
+## Current milestone: USB control connection
+- Kotlin Android receiver with a foreground loopback control server.
+- .NET 8 WPF Windows host with USB device selection, ADB forwarding, handshake and heartbeat.
+- Gradle Wrapper and GitHub Actions platform build checks.
 
-Initial project skeleton. USB video streaming, virtual display driver and touch forwarding are not implemented yet.
+Video streaming, virtual display driver, touch forwarding and automatic reconnect are not implemented yet. This is a development preview, not a working second display.
 
-## Projects
-
-- `android/`: Kotlin Android receiver. Open this folder in Android Studio.
-- `windows/`: .NET 8 WPF host. Open `windows/Kitescreen.sln` in Visual Studio.
-- `driver/`: planned Windows IddCx virtual display driver.
-- `docs/`: setup and architecture notes.
-
-See [development setup](docs/SETUP.md).
+Open `android/` in Android Studio and `windows/Kitescreen.sln` in Visual Studio.
+See [setup](docs/SETUP.md), [USB protocol and test checklist](docs/USB-PROTOCOL.md), and [architecture](docs/ARCHITECTURE.md).

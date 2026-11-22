@@ -1,27 +1,20 @@
 # Development setup
 
-## Get the source
-
-Pull `main` in your existing clone. If Android Studio and Visual Studio use separate clones, pull in both folders.
-
-## Windows
-
-Install Visual Studio with the .NET desktop development workload and .NET 8 SDK. Open `windows/Kitescreen.sln`, select Kitescreen.Host as the startup project and run. The expected result is a status screen only.
+Pull main in both clones if Visual Studio and Android Studio use different folders.
 
 ## Android
+Open the android subfolder (not the repository root) in Android Studio. Gradle Wrapper 8.9 is included, including its official JAR verified against the published SHA-256. No separate Gradle installation is needed. Use JDK 17 and install SDK 35 when prompted. Sync, select the tablet and run the app.
 
-Baseline toolchain: JDK 17, Gradle 8.9, Android Gradle Plugin 8.7.3, Kotlin 2.0.21 and Android SDK 35. These are pinned baseline versions, not a claim to use the latest releases. Minimum device version: Android 8.0 (API 26).
+On Samsung A8: Settings > About tablet > Software information > tap Build number seven times. Enable USB debugging in Developer options. Connect a USB data cable, unlock the tablet and authorize your computer. Keep Kitescreen visible.
 
-This initial skeleton does not include the binary Gradle wrapper. Before syncing, install Gradle 8.9 and run the following inside `android/`:
+## Windows
+Open windows/Kitescreen.sln in Visual Studio with the .NET desktop development workload and .NET 8 SDK. Build and run Kitescreen.Host.
 
-```powershell
-gradle wrapper --gradle-version 8.9 --distribution-type bin
-```
+The app searches standard Android SDK locations for platform-tools/adb.exe. If missing, use Browse and select the adb.exe from the SDK configured in Android Studio.
 
-Commit the generated `gradlew`, `gradlew.bat` and `gradle/wrapper/` files so later clones do not need a local Gradle installation. Then open `android/` in Android Studio, select JDK 17 for Gradle, install SDK 35 if prompted, sync and run the app. The expected result is a welcome screen only.
+Click Refresh devices, select your authorized Samsung tablet, then Connect. Both apps should report connected. Disconnect ends the session. If unauthorized, allow debugging on the tablet and refresh. If the handshake times out, make sure the Android app is running in the foreground.
 
-USB debugging is needed when deploying the development app over USB. The USB streaming implementation will be added separately.
+This milestone only tests the USB control channel. No screen image, extended desktop, audio or touch forwarding is implemented yet.
 
-## Validation status
-
-Source skeleton only. Neither platform build nor hardware connection has been verified in the assistant environment. Record actual build results before treating this as a tested release.
+## Build checks
+GitHub Actions builds the Windows host and Android debug APK and runs Android lint. Hardware tests are separate: follow docs/USB-PROTOCOL.md. An APK can be downloaded from a successful build's Kitescreen-Android-debug artifact.
