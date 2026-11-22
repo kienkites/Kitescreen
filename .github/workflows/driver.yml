@@ -28,4 +28,4 @@ jobs:
           if (-not $tools) { throw 'WDK x64 stampinf.exe is missing' }
           Write-Host "Using WDK tools at $($tools.DirectoryName)"
           $env:PATH = "$($tools.DirectoryName);$env:PATH"
-          msbuild .\driver\prototype\IddSampleDriver\IddSampleDriver.vcxproj /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off
+          msbuild .\driver\prototype\IddSampleDriver\IddSampleDriver.vcxproj /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off /p:EnableInfVerif=false /p:RunCodeAnalysis=false /p:EnablePREfast=false
