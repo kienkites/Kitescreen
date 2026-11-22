@@ -1,0 +1,8 @@
+<Window x:Class="Kitescreen.Host.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Kitescreen" Width="760" Height="480" MinWidth="540" MinHeight="340" WindowStartupLocation="CenterScreen" Background="#101827" Foreground="White">
+    <StackPanel Margin="32" VerticalAlignment="Center">
+        <TextBlock Text="Kitescreen" FontSize="36" FontWeight="SemiBold" />
+        <TextBlock Text="Android tablet as a second display for Windows" FontSize="18" Margin="0,12,0,24" TextWrapping="Wrap" />
+        <TextBlock Text="Project skeleton" FontSize="20" Foreground="#7DD3FC" />
+        <TextBlock Text="USB streaming and the virtual display driver are not implemented yet." Margin="0,12,0,0" TextWrapping="Wrap" />
+    </StackPanel>
+</Window>

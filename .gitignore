@@ -1,0 +1,13 @@
+# Local IDE and build files
+.vs/
+**/bin/
+**/obj/
+.idea/
+.gradle/
+**/build/
+local.properties
+*.user
+*.suo
+*.jks
+*.keystore
+.env

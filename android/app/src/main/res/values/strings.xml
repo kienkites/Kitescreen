@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Kitescreen</string>
+    <string name="welcome">Kitescreen\n\nAndroid receiver\n\nProject skeleton — USB video is not implemented yet.</string>
+</resources>
