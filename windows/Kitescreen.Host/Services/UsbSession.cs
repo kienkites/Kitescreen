@@ -22,18 +22,23 @@ public sealed class UsbSession
                     await client.ConnectAsync(IPAddress.Loopback, port.Value, deadline.Token);
                 }
                 using var stream = client.GetStream();
-                await WriteLineAsync(stream, "KITESCREEN/2 HELLO", token);
-                if (await ReadLineAsync(stream, token) != "KITESCREEN/2 READY")
+                await WriteLineAsync(stream, "KITESCREEN/3 HELLO", token);
+                if (await ReadLineAsync(stream, token) != "KITESCREEN/3 READY")
                     throw new IOException("Incompatible Android app. Update and run both apps.");
+                var dimensions = (await ReadLineAsync(stream, token)).Split(' ');
+                if (dimensions.Length != 3 || dimensions[0] != "DISPLAY" ||
+                    !int.TryParse(dimensions[1], out var width) || !int.TryParse(dimensions[2], out var height) ||
+                    width is < 640 or > 4096 || height is < 480 or > 4096 || (long)width * height > 4_194_304)
+                    throw new IOException("Tablet reported an invalid display resolution.");
                 await WriteLineAsync(stream, "STREAM JPEG", token);
                 if (await ReadLineAsync(stream, token) != "STREAM READY")
                     throw new IOException("The tablet did not accept screen streaming.");
 
-                using var capture = new ScreenCapture(display);
+                using var capture = new ScreenCapture(display, width, height);
                 var statistics = Stopwatch.StartNew();
                 int frames = 0;
                 long bytes = 0;
-                status("Streaming the selected screen via USB…");
+                status($"Streaming at tablet resolution {width} × {height}…");
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
@@ -55,7 +60,7 @@ public sealed class UsbSession
                         bytes = 0;
                         statistics.Restart();
                     }
-                    var pause = TimeSpan.FromMilliseconds(100) - Stopwatch.GetElapsedTime(started);
+                    var pause = TimeSpan.FromMilliseconds(50) - Stopwatch.GetElapsedTime(started);
                     if (pause > TimeSpan.Zero) await Task.Delay(pause, token);
                 }
             }

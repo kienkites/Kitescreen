@@ -1,6 +1,6 @@
 # Development setup and screen test
 
-If both IDEs share one clone, pull main once. In Visual Studio open windows/Kitescreen.sln; in Android Studio open the same clone's android subfolder. Stop running apps before updating, then rebuild and run both. Protocol v2 requires both apps to be updated.
+If both IDEs share one clone, pull main once. In Visual Studio open windows/Kitescreen.sln; in Android Studio open the same clone's android subfolder. Stop running apps before updating, then rebuild and run both. Protocol v3 requires both apps to be updated.
 
 ## Android
 Gradle Wrapper 8.9 is included. Use JDK 17 and Android SDK 35. Sync, select Samsung SM-X200 and run. Keep Kitescreen visible and the tablet unlocked. Enable USB debugging and authorize your computer. Android should show "Waiting for Windows over USB".
@@ -18,7 +18,7 @@ Use Visual Studio with .NET desktop development and the .NET 8 SDK. Build and ru
 An updated Android APK is also available in the Kitescreen-Android-debug artifact of a successful GitHub Actions build.
 
 ## What this version does
-Mirrors an existing monitor using JPEG frames over USB, up to a 1280-pixel longest edge and 10 fps. Windows shows measured fps and Mbps. It does not yet create a second Windows display, forward touch or reconnect automatically. Rotate the tablet and restart streaming if the activity restarts. A later H.264 transport and IddCx driver will build on this prototype.
+Mirrors an existing monitor using JPEG frames over USB, the tablet's reported pixel size and up to 20 fps. Windows shows measured fps and Mbps. It does not yet create a second Windows display, forward touch or reconnect automatically. Rotate the tablet and restart streaming if the activity restarts. A later H.264 transport and IddCx driver will build on this prototype.
 
 ## Checks
 GitHub Actions builds Windows, checks its binary frame format, builds Android, runs protocol/lifecycle unit tests and Android lint. Physical image quality, capture behavior and USB performance still need testing on the user's PC and Samsung A8.

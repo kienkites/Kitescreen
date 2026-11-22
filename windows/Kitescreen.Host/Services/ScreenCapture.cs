@@ -18,6 +18,7 @@ public sealed record DisplaySource(string Name, Rectangle Bounds, bool Primary)
 public sealed class ScreenCapture : IDisposable
 {
     private readonly Rectangle bounds;
+    private readonly double ratio;
     private readonly Bitmap desktop;
     private readonly Bitmap scaled;
     private readonly Graphics desktopGraphics;
@@ -25,18 +26,21 @@ public sealed class ScreenCapture : IDisposable
     private readonly ImageCodecInfo jpeg = ImageCodecInfo.GetImageEncoders().First(x => x.MimeType == "image/jpeg");
     private readonly EncoderParameters parameters = new(1);
 
-    public ScreenCapture(DisplaySource source)
+    public ScreenCapture(DisplaySource source, int targetWidth, int targetHeight)
     {
         bounds = source.Bounds;
         if (bounds.Width < 1 || bounds.Height < 1 || (long)bounds.Width * bounds.Height > 33_554_432)
             throw new IOException("Unsupported monitor size. Select a monitor up to 32 megapixels.");
-        var ratio = Math.Min(1d, Math.Min(1280d / bounds.Width, 1280d / bounds.Height));
+        if (targetWidth is < 640 or > 4096 || targetHeight is < 480 or > 4096 ||
+            (long)targetWidth * targetHeight > 4_194_304)
+            throw new IOException("Tablet reported an unsupported resolution.");
+        ratio = Math.Min(1d, Math.Min((double)targetWidth / bounds.Width, (double)targetHeight / bounds.Height));
         desktop = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format24bppRgb);
-        scaled = new Bitmap(Math.Max(1, (int)(bounds.Width * ratio)), Math.Max(1, (int)(bounds.Height * ratio)), PixelFormat.Format24bppRgb);
+        scaled = new Bitmap(targetWidth, targetHeight, PixelFormat.Format24bppRgb);
         desktopGraphics = Graphics.FromImage(desktop);
         scaledGraphics = Graphics.FromImage(scaled);
         scaledGraphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
-        parameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 75L);
+        parameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 88L);
     }
 
     public byte[] Capture()
@@ -51,7 +55,10 @@ public sealed class ScreenCapture : IDisposable
             desktopGraphics.FillEllipse(Brushes.Black, x - 6, y - 6, 12, 12);
             desktopGraphics.DrawEllipse(Pens.White, x - 6, y - 6, 12, 12);
         }
-        scaledGraphics.DrawImage(desktop, new Rectangle(0, 0, scaled.Width, scaled.Height));
+        scaledGraphics.Clear(Color.Black);
+        var drawWidth = Math.Max(1, (int)Math.Round(bounds.Width * ratio));
+        var drawHeight = Math.Max(1, (int)Math.Round(bounds.Height * ratio));
+        scaledGraphics.DrawImage(desktop, new Rectangle((scaled.Width - drawWidth) / 2, (scaled.Height - drawHeight) / 2, drawWidth, drawHeight));
         using var output = new MemoryStream();
         scaled.Save(output, jpeg, parameters);
         if (output.Length > FrameProtocol.MaxFrameBytes) throw new IOException("Captured frame exceeds the protocol limit.");

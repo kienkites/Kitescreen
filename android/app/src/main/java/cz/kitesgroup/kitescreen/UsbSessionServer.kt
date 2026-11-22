@@ -11,6 +11,7 @@ import java.util.concurrent.Executors
 /** USB development transport. Never binds to a network-facing address. */
 class UsbSessionServer(
     private val onFrame: (ByteArray) -> Unit = {},
+    private val dimensions: () -> Pair<Int, Int> = { 1920 to 1200 },
     private val status: (String) -> Unit
 ) : Closeable {
     private val executor = Executors.newSingleThreadExecutor()
@@ -43,8 +44,11 @@ class UsbSessionServer(
                                 output.write((line + "\n").toByteArray(Charsets.US_ASCII))
                                 output.flush()
                             }
-                            require(readLine(input) == "KITESCREEN/2 HELLO") { "Update both Kitescreen apps" }
-                            reply("KITESCREEN/2 READY")
+                            require(readLine(input) == "KITESCREEN/3 HELLO") { "Update both Kitescreen apps" }
+                            reply("KITESCREEN/3 READY")
+                            val (width, height) = dimensions()
+                            require(width in 640..4096 && height in 480..4096 && width.toLong() * height <= 4_194_304)
+                            reply("DISPLAY $width $height")
                             while (!stopped) {
                                 when (readLine(input)) {
                                     "PING" -> reply("PONG")

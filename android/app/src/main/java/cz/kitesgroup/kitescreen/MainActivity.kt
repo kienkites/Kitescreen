@@ -48,11 +48,18 @@ class MainActivity : Activity() {
         super.onStart()
         lateinit var active: UsbSessionServer
         active = UsbSessionServer(
+            dimensions = {
+                val metrics = android.util.DisplayMetrics()
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay.getRealMetrics(metrics)
+                metrics.widthPixels to metrics.heightPixels
+            },
             onFrame = { jpeg ->
                 // Validate dimensions before allocating decoded pixels.
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, bounds)
-                require(bounds.outWidth in 1..1280 && bounds.outHeight in 1..1280 &&
+                require(bounds.outWidth in 1..4096 && bounds.outHeight in 1..4096 &&
+                    bounds.outWidth.toLong() * bounds.outHeight <= 4_194_304 &&
                     bounds.outMimeType == "image/jpeg") { "Unsupported frame dimensions or format" }
                 val bitmap = requireNotNull(BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)) { "Cannot decode frame" }
                 val accepted = AtomicBoolean(false)
