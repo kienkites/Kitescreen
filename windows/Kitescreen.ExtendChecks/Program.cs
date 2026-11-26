@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using Kitescreen.Host.Services;
 
 using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+{
 var connection = DriverFrameSource.ConnectAsync(_ => { }, deadline.Token);
 using var sender = new NamedPipeClientStream(".", "KitescreenFrames", PipeDirection.Out, PipeOptions.Asynchronous);
 await sender.ConnectAsync(deadline.Token);
@@ -32,10 +33,9 @@ var pixel = image.GetPixel(100, 100);
 if (pixel.R < 200 || pixel.G < 90 || pixel.G > 170 || pixel.B > 90)
     throw new Exception($"Virtual frame color mismatch: {pixel}.");
 Console.WriteLine($"Virtual frame pipe and JPEG verified: {image.Width} × {image.Height}, {jpeg.Length} bytes.");
+}
 
 // An absent driver must produce an actionable error rather than leaving the UI waiting forever.
-sender.Dispose();
-receiver.Dispose();
 try
 {
     await DriverFrameSource.ConnectAsync(_ => { }, CancellationToken.None, TimeSpan.FromMilliseconds(200));
