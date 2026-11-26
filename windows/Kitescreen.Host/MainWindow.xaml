@@ -1,4 +1,12 @@
-<Window x:Class="Kitescreen.Host.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Kitescreen" Icon="Assets/Kitescreen.ico" Width="820" Height="650" MinWidth="620" MinHeight="550" WindowStartupLocation="CenterScreen" Background="#101827" Foreground="White" Closing="Window_Closing">
+<Window x:Class="Kitescreen.Host.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Kitescreen" Icon="Assets/Kitescreen.ico" Width="820" Height="600" MinWidth="620" MinHeight="510" WindowStartupLocation="CenterScreen" Background="#101827" Foreground="White" Loaded="Window_Loaded" Closing="Window_Closing">
+    <Window.Resources>
+        <Style x:Key="PickerStyle" TargetType="ComboBox">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="#111827"/>
+        </Style>
+    </Window.Resources>
     <Grid Margin="32">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
@@ -6,26 +14,25 @@
         </Grid.RowDefinitions>
         <TextBlock Text="Kitescreen" FontSize="34" FontWeight="SemiBold"/>
         <TextBlock Grid.Row="1" Text="Connect your Android tablet via USB" FontSize="18" Margin="0,10,0,24"/>
-        <StackPanel Grid.Row="2">
-            <TextBlock Text="Android SDK adb.exe" Margin="0,0,0,6"/>
-            <DockPanel>
-                <Button x:Name="BrowseButton" Content="Browse…" DockPanel.Dock="Right" Margin="8,0,0,0" Padding="12,6" Click="Browse_Click"/>
-                <TextBox x:Name="AdbPath" Padding="8,6" VerticalContentAlignment="Center"/>
-            </DockPanel>
-        </StackPanel>
-        <StackPanel Grid.Row="3" Margin="0,16,0,0">
-            <TextBlock Text="Windows screen to share" Margin="0,0,0,6"/>
-            <ComboBox x:Name="Displays" DisplayMemberPath="Display" MinHeight="36" Foreground="Black" Margin="0,0,0,16"/>
+        <StackPanel x:Name="ConnectionOptions" Grid.Row="2">
             <TextBlock Text="USB tablet" Margin="0,0,0,6"/>
-            <ComboBox x:Name="Devices" DisplayMemberPath="Display" MinHeight="36" Foreground="Black"/>
-            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                <Button x:Name="RefreshButton" Content="Refresh devices" Padding="16,8" Click="Refresh_Click"/>
-                <Button x:Name="ConnectButton" Content="Mirror screen" Padding="16,8" Margin="8,0,0,0" Click="Connect_Click"/>
-                <Button x:Name="ExtendButton" Content="Extend (driver)" Padding="16,8" Margin="8,0,0,0" Click="Extend_Click"/>
-                <Button x:Name="DisconnectButton" Content="Stop" Padding="16,8" Margin="8,0,0,0" IsEnabled="False" Click="Disconnect_Click"/>
+            <ComboBox x:Name="Devices" DisplayMemberPath="Display" Style="{StaticResource PickerStyle}"/>
+            <TextBlock Text="Display mode" Margin="0,18,0,8"/>
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="MirrorMode" Content="Mirror" GroupName="DisplayMode" IsChecked="True" Margin="0,0,24,0" VerticalAlignment="Center"/>
+                <RadioButton x:Name="ExtendMode" Content="Extend" GroupName="DisplayMode" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Margin="0,18,0,0" IsEnabled="{Binding IsChecked, ElementName=MirrorMode}">
+                <TextBlock Text="Windows screen to mirror" Margin="0,0,0,6"/>
+                <ComboBox x:Name="Displays" DisplayMemberPath="Display" Style="{StaticResource PickerStyle}"/>
             </StackPanel>
         </StackPanel>
-        <TextBlock x:Name="Status" Grid.Row="4" Text="Open Kitescreen on the tablet, enable USB debugging and authorize this computer." TextWrapping="Wrap" Margin="0,20,0,0" Foreground="#7DD3FC"/>
-        <TextBlock Grid.Row="5" Text="Extend requires the signed experimental Kitescreen display driver and Windows Display settings set to Extend. Video still uses JPEG; touch is not available." VerticalAlignment="Bottom" TextWrapping="Wrap" Margin="0,16,0,0"/>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,16,0,0">
+            <Button x:Name="RefreshButton" Content="Refresh devices" Padding="16,8" Click="Refresh_Click"/>
+            <Button x:Name="ConnectButton" Content="Connect" Padding="16,8" Margin="8,0,0,0" Click="Connect_Click"/>
+            <Button x:Name="DisconnectButton" Content="Stop" Padding="16,8" Margin="8,0,0,0" IsEnabled="False" Click="Disconnect_Click"/>
+        </StackPanel>
+        <TextBlock x:Name="Status" Grid.Row="4" Text="Looking for a USB tablet…" TextWrapping="Wrap" Margin="0,20,0,0" Foreground="#7DD3FC"/>
+        <TextBlock Grid.Row="5" Text="Extend requires the experimental virtual display driver and Windows Display settings set to Extend. Video still uses JPEG; touch is not available." VerticalAlignment="Bottom" TextWrapping="Wrap" Margin="0,16,0,0"/>
     </Grid>
 </Window>
