@@ -38,6 +38,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Host publish failed.' }
 dotnet publish (Join-Path $root 'windows/Kitescreen.DriverSetup/Kitescreen.DriverSetup.csproj') -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $helper
 if ($LASTEXITCODE -ne 0) { throw 'Driver setup helper publish failed.' }
 
-& $Iscc "/DAppDir=$app" "/DHelperDir=$helper" "/DDriverDir=$driver" "/DAdbDir=$adb" "/DOutputDir=$Output" (Join-Path $PSScriptRoot 'Kitescreen.iss')
+& $Iscc "/DAppDir=$app" "/DHelperDir=$helper" "/DDriverDir=$driver" "/DAdbDir=$adb" "/DOutputDir=$Output" "/DIconFile=$(Join-Path $root 'windows/Kitescreen.Host/Assets/Kitescreen.ico')" (Join-Path $PSScriptRoot 'Kitescreen.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Windows installer compilation failed.' }
 Write-Host "Installer: $(Join-Path $Output 'Kitescreen-Windows-Setup.exe')"

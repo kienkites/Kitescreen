@@ -13,6 +13,9 @@
 #ifndef OutputDir
   #error OutputDir is required
 #endif
+#ifndef IconFile
+  #error IconFile is required
+#endif
 
 [Setup]
 AppId={{B66C69EB-BB96-4CC8-B903-EB96ABCE7097}
@@ -30,6 +33,7 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\Kitescreen.Host.exe
+SetupIconFile={#IconFile}
 
 [Files]
 Source: "{#AppDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
