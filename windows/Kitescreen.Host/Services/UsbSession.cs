@@ -42,7 +42,8 @@ public sealed class UsbSession
                 long bytes = 0;
                 double captureMs = 0;
                 double deliveryMs = 0;
-                status($"Streaming {(display is null ? "extended desktop" : "mirrored screen")} at {width} × {height}…");
+                status(display is null ? "Tablet connected. Waiting for the first extended-display image…"
+                    : $"Streaming mirrored screen at {width} × {height}…");
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
