@@ -1,5 +1,5 @@
 <Window x:Class="Kitescreen.Host.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Kitescreen" Icon="Assets/Kitescreen.ico" Width="820" Height="650" MinWidth="640" MinHeight="590"
+        Title="Kitescreen" Icon="Assets/Kitescreen.ico" Width="820" Height="720" MinWidth="640" MinHeight="680"
         WindowStartupLocation="CenterScreen" Background="#0B1526" Foreground="#F8FAFC" FontFamily="Segoe UI" FontSize="14"
         Loaded="Window_Loaded" Closing="Window_Closing">
     <Window.Resources>
