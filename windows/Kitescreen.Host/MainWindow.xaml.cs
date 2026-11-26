@@ -1,13 +1,13 @@
 using System.ComponentModel;
 using System.Windows;
 using Kitescreen.Host.Services;
-using Microsoft.Win32;
 
 namespace Kitescreen.Host;
 
 public partial class MainWindow : Window
 {
     private readonly CancellationTokenSource lifetime = new();
+    private readonly AdbService adb = new(AdbService.DefaultPath);
     private CancellationTokenSource? session;
     private bool closed;
     private Task? sessionTask;
@@ -15,28 +15,29 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        AdbPath.Text = AdbService.DefaultPath;
         Displays.ItemsSource = DisplaySource.List();
         Displays.SelectedIndex = 0;
     }
 
-    private void Browse_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog { Filter = "ADB executable|adb.exe", CheckFileExists = true };
-        if (dialog.ShowDialog(this) == true) AdbPath.Text = dialog.FileName;
-    }
+    private async void Window_Loaded(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
 
-    private async void Refresh_Click(object sender, RoutedEventArgs e)
+    private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
+
+    private async Task RefreshDevicesAsync()
     {
         SetBusy(true, false);
         try
         {
-            Displays.ItemsSource = DisplaySource.List();
-            Displays.SelectedIndex = 0;
-            var devices = await new AdbService(AdbPath.Text.Trim()).DevicesAsync(lifetime.Token);
+            var selectedScreen = (Displays.SelectedItem as DisplaySource)?.Name;
+            var screens = DisplaySource.List();
+            Displays.ItemsSource = screens;
+            Displays.SelectedItem = screens.FirstOrDefault(screen => screen.Name == selectedScreen) ?? screens.FirstOrDefault();
+            var selectedTablet = (Devices.SelectedItem as AndroidDevice)?.Serial;
+            var devices = await adb.DevicesAsync(lifetime.Token);
             if (closed) return;
             Devices.ItemsSource = devices;
-            Devices.SelectedItem = devices.FirstOrDefault(d => d.Authorized) ?? devices.FirstOrDefault();
+            Devices.SelectedItem = devices.FirstOrDefault(d => d.Serial == selectedTablet && d.Authorized)
+                ?? devices.FirstOrDefault(d => d.Authorized) ?? devices.FirstOrDefault();
             Status.Text = devices.Count == 0 ? "No USB tablets found. Check the data cable and USB debugging."
                 : devices.Any(d => d.Authorized) ? "Select your tablet and click Connect."
                 : "Unlock the tablet and allow USB debugging, then refresh.";
@@ -46,9 +47,7 @@ public partial class MainWindow : Window
         finally { if (!closed) SetBusy(false, false); }
     }
 
-    private async void Connect_Click(object sender, RoutedEventArgs e) => await ConnectAsync(false);
-
-    private async void Extend_Click(object sender, RoutedEventArgs e) => await ConnectAsync(true);
+    private async void Connect_Click(object sender, RoutedEventArgs e) => await ConnectAsync(ExtendMode.IsChecked == true);
 
     private async Task ConnectAsync(bool extend)
     {
@@ -68,7 +67,7 @@ public partial class MainWindow : Window
         Status.Text = "Connecting… Keep Kitescreen open on the tablet.";
         try
         {
-            sessionTask = new UsbSession().RunAsync(new AdbService(AdbPath.Text.Trim()), device.Serial,
+            sessionTask = new UsbSession().RunAsync(adb, device.Serial,
                 extend ? null : (DisplaySource)Displays.SelectedItem,
                 text => Dispatcher.BeginInvoke(new Action(() => { if (!closed) Status.Text = text; })), active.Token);
             await sessionTask;
@@ -90,8 +89,7 @@ public partial class MainWindow : Window
 
     private void SetBusy(bool busy, bool connected)
     {
-        RefreshButton.IsEnabled = ConnectButton.IsEnabled = ExtendButton.IsEnabled = BrowseButton.IsEnabled = !busy;
-        AdbPath.IsEnabled = Devices.IsEnabled = Displays.IsEnabled = !busy;
+        RefreshButton.IsEnabled = ConnectButton.IsEnabled = ConnectionOptions.IsEnabled = !busy;
         DisconnectButton.IsEnabled = connected;
     }
 
