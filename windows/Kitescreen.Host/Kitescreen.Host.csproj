@@ -5,12 +5,16 @@
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-      <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Kitescreen.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.IO.Pipes.AccessControl" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Kitescreen.ico" />
   </ItemGroup>
 </Project>
