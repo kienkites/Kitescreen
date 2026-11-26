@@ -73,7 +73,7 @@ public sealed class AdbService(string executable)
         }
         catch (System.ComponentModel.Win32Exception e)
         {
-            throw new IOException("Cannot start adb. Install Android SDK Platform-Tools or select adb.exe.", e);
+            throw new IOException("USB connection tool not found. Reinstall Kitescreen, or check Android SDK Platform-Tools on this development PC.", e);
         }
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
