@@ -1,0 +1,41 @@
+name: Prepare driver signing submission
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'driver/prototype/**'
+      - '.github/workflows/driver-submission.yml'
+permissions:
+  contents: read
+jobs:
+  submission:
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+      - uses: NuGet/setup-nuget@v2
+      - uses: microsoft/setup-msbuild@v2
+      - name: Restore SDK and WDK
+        shell: pwsh
+        run: nuget restore .\driver\prototype\packages.config -PackagesDirectory .\driver\prototype\packages\
+      - name: Build unsigned driver
+        shell: pwsh
+        run: |
+          $tools = Get-ChildItem .\driver\prototype\packages -Recurse -Filter stampinf.exe | Where-Object { $_.DirectoryName -match '\\x64$' } | Select-Object -First 1
+          if (-not $tools) { throw 'WDK x64 stampinf.exe is missing' }
+          $env:PATH = "$($tools.DirectoryName);$env:PATH"
+          msbuild .\driver\prototype\IddSampleDriver\IddSampleDriver.vcxproj /p:Configuration=Release /p:Platform=x64 /p:SignMode=Off /p:EnableInfVerif=false /p:RunCodeAnalysis=false /p:EnablePREfast=false /p:CompileOnly=true /p:ApiValidator_Enable=false
+          if ($LASTEXITCODE -ne 0) { throw 'Driver compilation failed' }
+      - name: Validate INF and create unsigned CAB
+        shell: pwsh
+        run: |
+          $inf2cat = Get-ChildItem .\driver\prototype\packages -Recurse -Filter Inf2Cat.exe | Select-Object -First 1
+          if (-not $inf2cat) { throw 'WDK Inf2Cat.exe is missing' }
+          .\driver\prototype\Build-Submission.ps1 -DriverBinary .\driver\prototype\IddSampleDriver\x64\Release\IddSampleDriver.dll -Inf2Cat $inf2cat.FullName -Output (Join-Path $env:RUNNER_TEMP 'KitescreenSubmission')
+          if ($LASTEXITCODE -ne 0) { throw 'Submission preparation failed' }
+      - name: Upload unsigned CAB for EV signing
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kitescreen-Driver-Submission-Unsigned
+          path: ${{ runner.temp }}\KitescreenSubmission\Disk1\Kitescreen-Driver-Submission.cab
+          if-no-files-found: error

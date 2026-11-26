@@ -2,6 +2,7 @@ param(
     [Parameter(Mandatory)] [string] $DriverPackage,
     [Parameter(Mandatory)] [string] $PlatformTools,
     [string] $Iscc = 'ISCC.exe',
+    [string] $SignTool = 'signtool.exe',
     [string] $Output = (Join-Path $PSScriptRoot 'out')
 )
 
@@ -25,6 +26,10 @@ if ($catalog.Status -ne 'Valid' -or
 }
 $inf = Get-Content (Join-Path $driver 'IddSampleDriver.inf') -Raw
 if ($inf -notmatch 'Root\\KitescreenPrototypeDisplay') { throw 'The driver hardware ID is unexpected.' }
+foreach ($file in @('IddSampleDriver.inf', 'IddSampleDriver.dll')) {
+    & $SignTool verify /pa /c (Join-Path $driver 'IddSampleDriver.cat') (Join-Path $driver $file)
+    if ($LASTEXITCODE -ne 0) { throw "The Microsoft-signed catalog does not cover $file." }
+}
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $stage = Join-Path $PSScriptRoot 'stage'
