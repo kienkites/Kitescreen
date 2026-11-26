@@ -19,6 +19,7 @@ public sealed class DriverFrameSource : IDisposable
     private readonly EncoderParameters parameters = new(1);
     private byte[] pixels = Array.Empty<byte>();
     private readonly byte[] header = new byte[16];
+    private bool receivedFirstFrame;
 
     private DriverFrameSource(NamedPipeServerStream pipe)
     {
@@ -26,7 +27,8 @@ public sealed class DriverFrameSource : IDisposable
         parameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 88L);
     }
 
-    public static async Task<DriverFrameSource> ConnectAsync(Action<string> status, CancellationToken token)
+    public static async Task<DriverFrameSource> ConnectAsync(Action<string> status, CancellationToken token,
+        TimeSpan? waitTimeout = null)
     {
         var security = new PipeSecurity();
         var user = WindowsIdentity.GetCurrent().User ?? throw new IOException("Cannot determine Windows user.");
@@ -40,8 +42,14 @@ public sealed class DriverFrameSource : IDisposable
             PipeOptions.Asynchronous, 65536, 0, security);
         try
         {
-            status("Waiting for Kitescreen virtual monitor frames. Install the signed driver, then choose Extend in Windows Display settings.");
-            await pipe.WaitForConnectionAsync(token);
+            status("Checking the Kitescreen virtual display…");
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+            deadline.CancelAfter(waitTimeout ?? TimeSpan.FromSeconds(6));
+            try { await pipe.WaitForConnectionAsync(deadline.Token); }
+            catch (OperationCanceledException) when (!token.IsCancellationRequested)
+            {
+                throw new IOException("Extend is not ready: the virtual display driver is not active. Choose Mirror for now; Extend requires a signed display driver.");
+            }
             return new DriverFrameSource(pipe);
         }
         catch { pipe.Dispose(); throw; }
@@ -49,7 +57,15 @@ public sealed class DriverFrameSource : IDisposable
 
     public async Task<byte[]> CaptureAsync(int targetWidth, int targetHeight, CancellationToken token)
     {
-        await pipe.ReadExactlyAsync(header, token);
+        // An inactive virtual monitor never produces its first frame. Do not wait forever.
+        using var firstFrameDeadline = receivedFirstFrame ? null : CancellationTokenSource.CreateLinkedTokenSource(token);
+        firstFrameDeadline?.CancelAfter(TimeSpan.FromSeconds(8));
+        var readToken = firstFrameDeadline?.Token ?? token;
+        try { await pipe.ReadExactlyAsync(header, readToken); }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+        {
+            throw new IOException("The virtual display connected but produced no image. Enable Extend in Windows Display settings, then try again.");
+        }
         if (header[0] != 'K' || header[1] != 'F' || header[2] != 'R' || header[3] != '1')
             throw new IOException("Invalid virtual display frame.");
         var width = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(4, 4));
@@ -59,7 +75,12 @@ public sealed class DriverFrameSource : IDisposable
             (long)width * height > 4_194_304 || size != (long)width * height * 4)
             throw new IOException("Invalid virtual display dimensions.");
         if (pixels.Length != size) pixels = new byte[size];
-        await pipe.ReadExactlyAsync(pixels, token);
+        try { await pipe.ReadExactlyAsync(pixels, readToken); }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+        {
+            throw new IOException("The virtual display did not complete its first frame. Check the display driver and try again.");
+        }
+        receivedFirstFrame = true;
 
         using var source = new Bitmap(width, height, PixelFormat.Format32bppRgb);
         var locked = source.LockBits(new Rectangle(0, 0, width, height),
