@@ -21,6 +21,14 @@ public partial class MainWindow : Window
 
     private async void Window_Loaded(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
 
+    private void Mode_Checked(object sender, RoutedEventArgs e)
+    {
+        if (ModeHint is null || ExtendMode is null) return;
+        ModeHint.Text = ExtendMode.IsChecked == true
+            ? "Extend needs a working virtual display driver. If Windows does not show a second display, choose Mirror for now."
+            : "Mirror shows an existing Windows screen on your tablet.";
+    }
+
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
 
     private async Task RefreshDevicesAsync()
